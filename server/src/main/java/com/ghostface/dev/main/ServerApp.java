@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 
 public class ServerApp {
     public static void main(String[] args) throws IOException {
-        @NotNull InetSocketAddress address = new InetSocketAddress("0.0.0.0",5551);
+        @NotNull InetSocketAddress address = new InetSocketAddress("0.0.0.0",8080);
         JChatServer chatServer = new JChatServer(address);
 
         try {
