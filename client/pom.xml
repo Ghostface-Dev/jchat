@@ -25,7 +25,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.ghostface.dev.ClientApp</mainClass>
+                            <mainClass>com.ghostface.dev.main.ClientApp</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

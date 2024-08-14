@@ -43,12 +43,12 @@ final class JChatClientThread extends Thread {
 
         try {
             @NotNull BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            @NotNull PrintWriter writer = new PrintWriter(new PrintWriter(socket.getOutputStream()));
+            @NotNull PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
 
             @NotNull String username = reader.readLine();
             @NotNull User user = new User(username, socket);
 
-            if (!chatServer.getUsers().containsValue(user)) {
+            if (chatServer.getUsers().containsValue(user)) {
                 writer.println(false);
                 socket.close();
                 return false;
@@ -94,10 +94,11 @@ final class JChatClientThread extends Thread {
         @NotNull String content = "[" + time + "] " + msg.getUser().getUsername() + ": " + msg.getContent();
 
         for (@NotNull User user: users.values()) {
+            @NotNull PrintWriter writer = new PrintWriter(user.getSocket().getOutputStream(),true);
             if (user != msg.getUser()) {
-                @NotNull PrintWriter writer = new PrintWriter(user.getSocket().getOutputStream(),true);
                 writer.println(content);
             }
+            writer.println();
         }
 
     }
@@ -117,12 +118,15 @@ final class JChatClientThread extends Thread {
     @Override
     public void run() {
         try {
+
             if (clientAuthentication(socket)) {
+                System.out.println(socket.getLocalAddress().getHostAddress() + " sucessful authenticated");
                 while (socket.isConnected()) {
                     @NotNull Message msg = messageListener(socket, chatServer.getUsers());
                     broadcastMessage(msg, chatServer.getUsers());
                 }
             }
+
         } catch (IOException e) {
             System.err.println("I/O error: " + e.getMessage());
         }

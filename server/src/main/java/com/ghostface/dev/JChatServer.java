@@ -11,8 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 public final class JChatServer {
 
@@ -54,6 +53,8 @@ public final class JChatServer {
         }
 
         this.server = new ServerSocket(address.getPort(), 50, address.getAddress());;
+
+        System.out.println("server is running");
 
         this.thread = new JChatServerThread(this);
         this.thread.start();

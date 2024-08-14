@@ -28,7 +28,7 @@ public final class User {
     public boolean equals(@Nullable Object object) {
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
-        User user = (User) object;
+        @NotNull User user = (User) object;
         return Objects.equals(username, user.username);
     }
 
