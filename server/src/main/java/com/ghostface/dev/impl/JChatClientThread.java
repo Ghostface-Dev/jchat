@@ -127,7 +127,7 @@ final class JChatClientThread extends Thread {
             }
 
         } catch (IOException e) {
-            System.err.println("I/O error: " + e.getMessage());
+            System.err.println(socket.getLocalAddress().getHostAddress() + " Disconnect: " + e.getMessage());
         }
     }
 }
