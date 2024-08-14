@@ -8,8 +8,10 @@
         <outputRelativeToContentRoot value="true" />
         <module name="client" />
         <module name="server" />
-        <module name="commons" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="commons" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

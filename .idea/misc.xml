@@ -14,6 +14,7 @@
     <option name="ignoredFiles">
       <set>
         <option value="$PROJECT_DIR$/commons/client/pom.xml" />
+        <option value="$PROJECT_DIR$/commons/pom.xml" />
       </set>
     </option>
   </component>
