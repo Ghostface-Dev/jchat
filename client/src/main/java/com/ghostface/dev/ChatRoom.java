@@ -56,15 +56,17 @@ public final class ChatRoom {
         @NotNull PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
         @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
-        @NotNull String msg = in.readLine();
+        while (true) {
+            @NotNull String msg = in.readLine();
 
-        @NotNull Message message = new Message(OffsetDateTime.now(), msg);
+            @NotNull Message message = new Message(OffsetDateTime.now(), msg);
 
-        writer.println(msg);
+            writer.println(msg);
 
-        @NotNull String time = message.getTime().format(DateTimeFormatter.ofPattern("yy/MM/dd HH:mm"));
+            @NotNull String time = message.getTime().format(DateTimeFormatter.ofPattern("yy/MM/dd HH:mm"));
 
-        System.out.println("[" + time + "] " + "You: " + message.getContent());
+            System.out.println("[" + time + "] " + "You: " + message.getContent());
+        }
 
     }
 
@@ -72,13 +74,10 @@ public final class ChatRoom {
 
         @NotNull BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-        @NotNull String msg = reader.readLine();
-
-        if (msg.isEmpty()) {
-            return;
+        while (true) {
+            @NotNull String msg = reader.readLine();
+            System.out.println(msg);
         }
-
-        System.out.println(msg);
 
     }
 
@@ -92,10 +91,21 @@ public final class ChatRoom {
         this.socket = new Socket(address.getHostName(), address.getPort());
 
         if (authentication(socket)) {
-            while (socket.isConnected()) {
-                receiveMessage(socket);
-                sendMessage(socket);
-            }
+            new Thread(() -> {
+                try {
+                    receiveMessage(socket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+            new Thread(() -> {
+                try {
+                    sendMessage(socket);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
         }
 
     }

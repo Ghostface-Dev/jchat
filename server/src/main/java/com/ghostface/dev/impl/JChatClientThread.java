@@ -98,7 +98,6 @@ final class JChatClientThread extends Thread {
             if (user != msg.getUser()) {
                 writer.println(content);
             }
-            writer.println();
         }
 
     }
