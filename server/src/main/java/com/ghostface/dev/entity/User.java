@@ -1,39 +1,32 @@
 package com.ghostface.dev.entity;
 
+import com.ghostface.dev.connection.JChatClient;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.net.Socket;
-import java.util.Objects;
+import java.time.OffsetDateTime;
 
 public final class User {
 
     private final @NotNull String username;
-    private final @NotNull Socket socket;
+    private final @NotNull JChatClient client;
+    private final @NotNull OffsetDateTime time;
 
-    public User(@NotNull String username, @NotNull Socket socket) {
+    public User(@NotNull String username, @NotNull JChatClient client) {
         this.username = username;
-        this.socket = socket;
+        this.client = client;
+        this.time = OffsetDateTime.now();
     }
 
     public @NotNull String getUsername() {
         return username;
     }
 
-    public @NotNull Socket getSocket() {
-        return socket;
+    public @NotNull JChatClient getClient() {
+        return client;
     }
 
-    @Override
-    public boolean equals(@Nullable Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-        @NotNull User user = (User) object;
-        return Objects.equals(username, user.username);
+    public @NotNull OffsetDateTime getTime() {
+        return time;
     }
 
-    @Override
-    public int hashCode() {
-        return Objects.hashCode(username);
-    }
 }
