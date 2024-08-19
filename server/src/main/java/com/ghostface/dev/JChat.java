@@ -1,23 +1,30 @@
-package com.ghostface.dev.connection;
+package com.ghostface.dev;
 
+import com.ghostface.dev.connection.JChatClient;
+import com.ghostface.dev.impl.JChatThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
+
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class JChat {
 
-    private final @NotNull Collection<@NotNull JChatClient> clients = new JChatClients();
+    private static final Logger log = LoggerFactory.getLogger(JChat.class);
+
+    private final @NotNull Set<@NotNull JChatClient> clients = ConcurrentHashMap.newKeySet();
     private final @NotNull InetSocketAddress address;
 
     private @Nullable ServerSocket socket;
@@ -33,8 +40,9 @@ public final class JChat {
     public synchronized boolean start() throws IOException {
 
         @Nullable ServerSocket socket = getSocket();
+        @Nullable Selector key = getSelector();
 
-        if ((socket != null && socket.isBound()) || (selector != null && selector.isOpen())) {
+        if ((socket != null && socket.isBound()) || (key != null && key.isOpen())) {
             return false;
         }
 
@@ -44,8 +52,11 @@ public final class JChat {
         channel.configureBlocking(false);
         this.socket = channel.socket();
 
-        channel.socket().bind(address);
-        channel.register(getSelector(), SelectionKey.OP_ACCEPT);
+        channel.bind(address);
+        channel.register(selector, SelectionKey.OP_ACCEPT);
+
+        this.thread = new JChatThread(this);
+        this.thread.start();
 
         return true;
     }
@@ -65,7 +76,11 @@ public final class JChat {
         return thread;
     }
 
-    public @NotNull Collection<@NotNull JChatClient> getClients() {
+    public @NotNull Set<@NotNull JChatClient> getClients() {
         return clients;
+    }
+
+    public @NotNull InetSocketAddress getAddress() {
+        return address;
     }
 }
