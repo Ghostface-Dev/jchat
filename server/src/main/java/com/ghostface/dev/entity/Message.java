@@ -1,4 +1,4 @@
 package com.ghostface.dev.entity;
 
-public class Message {
+public final class Message {
 }
