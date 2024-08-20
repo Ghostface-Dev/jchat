@@ -10,42 +10,18 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
-public final class ClientConnection {
+public final class Client {
 
     private final @NotNull ChatServer chat;
     private final @NotNull Socket socket;
     private @Nullable User user;
     private boolean authenticated = false;
 
-    public ClientConnection(@NotNull ChatServer chat, @NotNull Socket socket) {
+    public Client(@NotNull ChatServer chat, @NotNull Socket socket) {
         this.chat = chat;
         this.socket = socket;
-    }
-
-    // methods
-
-    public @Nullable String read() throws IOException {
-
-        @NotNull ByteBuffer buffer = ByteBuffer.allocate(4096);
-        @NotNull StringBuilder builder = new StringBuilder();
-        buffer.clear();
-
-        int response = socket.getChannel().read(buffer);
-
-        if (response == -1) {
-            throw new ClosedChannelException();
-        } else if (response == 0) {
-            return null;
-        } else while (response > 0) {
-            buffer.flip();
-            builder.append(StandardCharsets.UTF_8.decode(buffer));
-            buffer.clear();
-
-            response = socket.getChannel().read(buffer);
-        }
-
-        return builder.toString();
     }
 
     public void close() throws IOException {
@@ -83,5 +59,20 @@ public final class ClientConnection {
             throw new IllegalArgumentException("Client already authenticated");
         }
         this.authenticated = authenticated;
+    }
+
+    // natives
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        @NotNull Client client = (Client) object;
+        return Objects.equals(socket, client.socket) && Objects.equals(user, client.user);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(socket, user);
     }
 }
