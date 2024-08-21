@@ -37,6 +37,7 @@ final class ChatServerThread extends Thread {
 
     @Override
     public void run() {
+        log.info("Server is running on {} port", server.getLocalPort());
         while (server.isBound() && selector.isOpen()) {
             @Nullable SocketChannel channel = null;
             @Nullable Iterator<@NotNull SelectionKey> keyIterator = null;
@@ -55,7 +56,10 @@ final class ChatServerThread extends Thread {
                         if (key.isAcceptable()) {
                             channel = server.accept().getChannel();
                             channel.configureBlocking(false);
-                            channel.register(selector, SelectionKey.OP_READ| SelectionKey.OP_WRITE);
+                            channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
+
+                            log.warn("{} Trying to connect", channel.socket().getInetAddress().getHostName());
+
                             @NotNull Client client = new Client(chat, channel);
                             // client already in CLIENTS by constructor
                         }
@@ -67,19 +71,16 @@ final class ChatServerThread extends Thread {
                             if (client == null) {
                                 clientChannel.close();
                             } else {
+                                // todo authenticate
 
-                                if (!client.isAuthenticated()) {
-                                    // todo authenticate
-                                } else { // waiting for message
-                                    @NotNull ClientHandler handler = new ClientHandler(client);
-                                    @Nullable String content = handler.read();
+                                // waiting for message
+                                @NotNull ClientHandler handler = new ClientHandler(client);
+                                @Nullable String content = handler.read();
 
-                                    if (content == null) {
-                                        log.info("Client message: null");
-                                    } else {
-                                        log.info("Client Message: {}", content);
-                                    }
-
+                                if (content == null) {
+                                    log.info("Client message: null");
+                                } else {
+                                    log.info("Client Message: {}", content);
                                 }
 
                             }
@@ -108,7 +109,6 @@ final class ChatServerThread extends Thread {
             }
         }
     }
-
 
     // getters
 

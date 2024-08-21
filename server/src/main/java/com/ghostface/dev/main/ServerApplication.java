@@ -14,7 +14,7 @@ public final class ServerApplication {
             server.start(new InetSocketAddress("0.0.0.0", 5551));
 
         } catch (IOException e) {
-
+            e.printStackTrace();
         }
     }
 
