@@ -24,13 +24,14 @@ public final class ChatClient {
 
         this.selector = Selector.open();
 
-        @NotNull SocketChannel channel = SocketChannel.open();
+        SocketChannel channel = SocketChannel.open();
 
-        channel.configureBlocking(true);
-        channel.register(this.selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+        channel.configureBlocking(false);
+        channel.register(selector, SelectionKey.OP_CONNECT);
 
-        this.socket = channel.socket();
-        this.socket.connect(address);
+        socket = channel.socket();
+
+        channel.connect(address);
 
         this.thread = new ChatClientThread(this);
         this.thread.start();
