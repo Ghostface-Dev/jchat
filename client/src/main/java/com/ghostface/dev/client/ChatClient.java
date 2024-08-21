@@ -23,7 +23,9 @@ public final class ChatClient {
         }
 
         this.selector = Selector.open();
+
         @NotNull SocketChannel channel = SocketChannel.open();
+
         channel.configureBlocking(true);
         channel.register(this.selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ);
 

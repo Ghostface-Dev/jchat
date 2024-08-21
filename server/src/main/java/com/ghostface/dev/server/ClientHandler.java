@@ -23,7 +23,7 @@ final class ClientHandler {
         @NotNull StringBuilder builder = new StringBuilder();
         buffer.clear();
 
-        int response = client.getSocket().getChannel().read(buffer);
+        int response = client.getChannel().read(buffer);
 
         if (response == -1) {
             throw new ClosedChannelException();
@@ -34,18 +34,18 @@ final class ClientHandler {
             builder.append(StandardCharsets.UTF_8.decode(buffer));
             buffer.clear();
 
-            response = client.getSocket().getChannel().read(buffer);
+            response = client.getChannel().read(buffer);
         }
 
         return builder.toString();
     }
 
     public void write(@NotNull String s) throws IOException {
-        client.getSocket().getChannel().write(ByteBuffer.wrap(s.getBytes()));
+        client.getChannel().write(ByteBuffer.wrap(s.getBytes()));
     }
 
     public void write(boolean value) throws IOException {
-        client.getSocket().getChannel().write(ByteBuffer.wrap(String.valueOf(value).getBytes()));
+        client.getChannel().write(ByteBuffer.wrap(String.valueOf(value).getBytes()));
     }
 
     public void broadcastMessage(@NotNull Message msg) throws IOException {

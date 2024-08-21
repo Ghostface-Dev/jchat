@@ -53,7 +53,7 @@ public final class ChatServer {
         }
 
         for (@NotNull Client client : clients) {
-            client.getSocket().close();
+            client.getChannel().close();
         }
 
         this.thread.interrupt();

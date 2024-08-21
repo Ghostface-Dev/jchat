@@ -6,27 +6,28 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.charset.StandardCharsets;
+import java.nio.channels.SocketChannel;
 import java.util.Objects;
 
 public final class Client {
 
     private final @NotNull ChatServer chat;
-    private final @NotNull Socket socket;
+    private final @NotNull SocketChannel channel;
     private @Nullable User user;
     private boolean authenticated = false;
 
-    public Client(@NotNull ChatServer chat, @NotNull Socket socket) {
+    public Client(@NotNull ChatServer chat, @NotNull SocketChannel channel) {
         this.chat = chat;
-        this.socket = socket;
+
+        if (!channel.socket().isConnected()) throw new IllegalArgumentException("Channel is not active");
+
+        this.channel = channel;
+        chat.getClients().add(this);
     }
 
     public void close() throws IOException {
-        // remove from users
-        socket.close();
+        chat.getClients().remove(this);
+        channel.close();
     }
 
     // getters
@@ -35,8 +36,8 @@ public final class Client {
         return chat;
     }
 
-    public @NotNull Socket getSocket() {
-        return socket;
+    public @NotNull SocketChannel getChannel() {
+        return channel;
     }
 
     public @Nullable User getUser() {
@@ -68,11 +69,11 @@ public final class Client {
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         @NotNull Client client = (Client) object;
-        return Objects.equals(socket, client.socket) && Objects.equals(user, client.user);
+        return Objects.equals(channel, client.channel) && Objects.equals(user, client.user);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(socket, user);
+        return Objects.hash(channel, user);
     }
 }
