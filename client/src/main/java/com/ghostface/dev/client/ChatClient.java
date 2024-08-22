@@ -5,7 +5,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -13,25 +12,23 @@ import java.nio.channels.SocketChannel;
 public final class ChatClient {
 
     private @Nullable Selector selector;
-    private @Nullable Socket socket;
+    private @Nullable SocketChannel channel;
     private @Nullable Thread thread;
 
     public synchronized boolean join(@NotNull InetSocketAddress address) throws IOException {
 
-        if ((socket != null && socket.isBound()) || selector != null) {
+        if ((channel != null && channel.socket().isBound()) || selector != null) {
             return false;
         }
 
         this.selector = Selector.open();
 
-        SocketChannel channel = SocketChannel.open();
+        channel = SocketChannel.open();
 
         channel.configureBlocking(false);
         channel.register(selector, SelectionKey.OP_CONNECT);
-
-        socket = channel.socket();
-
         channel.connect(address);
+
 
         this.thread = new ChatClientThread(this);
         this.thread.start();
@@ -41,16 +38,16 @@ public final class ChatClient {
 
     public synchronized boolean exit() throws IOException {
 
-        if (selector == null || (socket == null || !socket.isBound()) || this.thread == null) {
+        if (selector == null || (channel == null || !channel.socket().isBound()) || this.thread == null) {
             return false;
         }
 
         this.thread.interrupt();
 
-        this.socket.close();
+        this.channel.close();
         this.selector.close();
 
-        this.socket = null;
+        this.channel = null;
         this.selector = null;
 
         return true;
@@ -60,8 +57,8 @@ public final class ChatClient {
         return selector;
     }
 
-    public @Nullable Socket getSocket() {
-        return socket;
+    public @Nullable SocketChannel getChannel() {
+        return channel;
     }
 
     public @Nullable Thread getThread() {

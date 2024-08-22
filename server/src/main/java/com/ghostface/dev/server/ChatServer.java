@@ -6,7 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -18,37 +17,34 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ChatServer {
 
     private final @NotNull Set<@NotNull Client> clients = ConcurrentHashMap.newKeySet();
-    private @Nullable ServerSocket socket;
+    private @Nullable ServerSocketChannel channel;
     private @Nullable Selector selector;
     private @Nullable Thread thread;
 
     public synchronized boolean start(@NotNull InetSocketAddress address) throws IOException {
-        @Nullable ServerSocket socket = getSocket();
+        @Nullable ServerSocketChannel channel = getSocket();
         @Nullable Selector selector = getSelector();
 
-        if ((socket != null && socket.isBound()) || selector != null ) {
+        if ((channel != null && channel.socket().isBound()) || selector != null ) {
             return false;
         }
 
         this.selector = Selector.open();
-        @NotNull ServerSocketChannel channel = ServerSocketChannel.open();
-        channel.configureBlocking(false);
-        channel.register(this.selector, SelectionKey.OP_ACCEPT);
-        channel.bind(address);
 
-        this.socket = channel.socket();
+        this.channel = ServerSocketChannel.open();
+        this.channel.configureBlocking(false);
+        this.channel.register(this.selector, SelectionKey.OP_ACCEPT);
+        this.channel.bind(address);
 
         this.thread = new ChatServerThread(this);
         this.thread.start();
 
         return true;
-
     }
 
     public synchronized boolean stop() throws IOException {
-        @Nullable ServerSocket socket = getSocket();
 
-        if ((socket == null || !socket.isBound()) || getSelector() == null || this.thread == null) {
+        if ((channel == null || !channel.socket().isBound()) || getSelector() == null || this.thread == null) {
             return false;
         }
 
@@ -58,12 +54,12 @@ public final class ChatServer {
 
         this.thread.interrupt();
 
-        this.socket.close();
+        this.channel.close();
         this.selector.close();
         clients.clear();
 
         this.selector = null;
-        this.socket = null;
+        this.channel = null;
         this.thread = null;
 
         return true;
@@ -73,8 +69,8 @@ public final class ChatServer {
         return clients;
     }
 
-    public @Nullable ServerSocket getSocket() {
-        return socket;
+    public @Nullable ServerSocketChannel getSocket() {
+        return channel;
     }
 
     public @Nullable Selector getSelector() {

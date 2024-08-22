@@ -1,13 +1,13 @@
 package com.ghostface.dev.client;
 
-import com.ghostface.dev.utility.Mensseger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.Socket;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -16,6 +16,7 @@ import java.util.Iterator;
 final class ChatClientThread extends Thread {
 
     private static final Logger log = LoggerFactory.getLogger(ChatClientThread.class);
+
     private final @NotNull ChatClient client;
     private final @NotNull SocketChannel channel;
     private final @NotNull Selector selector;
@@ -23,51 +24,58 @@ final class ChatClientThread extends Thread {
     public ChatClientThread(@NotNull ChatClient client) {
         this.client = client;
 
-        @Nullable Socket socket = client.getSocket();
+        @Nullable SocketChannel channel = client.getChannel();
         @Nullable Selector selector = client.getSelector();
 
-        if (socket == null) {
-            throw new IllegalArgumentException("Socket is null");
+        if (channel == null || !channel.isOpen()) {
+            throw new IllegalArgumentException("Socket is not active");
         } else if (selector == null) {
             throw new IllegalArgumentException("Selector is null");
         }
 
-        this.channel = socket.getChannel();
+        this.channel = channel;
         this.selector = selector;
     }
 
     @Override
     public void run() {
-        log.info("connected to {}", channel.socket().getInetAddress().getHostAddress());
 
         while (selector.isOpen()) {
 
-           try {
-               selector.select();
-               @NotNull Iterator<@NotNull SelectionKey> keyIterator = selector.selectedKeys().iterator();
+            try {
 
-               while (keyIterator.hasNext()) {
-                   @NotNull SelectionKey key = keyIterator.next();
-                   keyIterator.remove();
+                if (selector.select() > 0) {
+                    @NotNull Iterator<@NotNull SelectionKey> keyIterator = selector.selectedKeys().iterator();
 
-                   if (key.isConnectable()) {
-                       if (!channel.finishConnect()) {
-                           channel.close();
-                       } else {
-                           channel.register(selector, SelectionKey.OP_WRITE | SelectionKey.OP_READ);
-                       }
-                   }
+                    while (keyIterator.hasNext()) {
+                        @NotNull SelectionKey key = keyIterator.next();
+                        keyIterator.remove();
 
-                   if (key.isWritable()) {
-                       Mensseger.write(channel, "Hello world");
-                   }
+                        if (key.isConnectable()) {
+                            if (channel.finishConnect()) {
+                                channel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE, ByteBuffer.allocate(4096));
+                                log.info("Connection {} is Succesfull", channel.getLocalAddress());
+                            } else {
+                                key.cancel();
+                            }
+                        }
 
-               }
+                        if (key.isWritable()) {
+                        }
 
-           } catch (IOException e) {
-               System.err.println(e.getMessage());
-           }
-       }
+                    }
+
+                }
+
+
+
+            } catch (IOException e) {
+                log.error("I/O error: {}", e.getMessage());
+                break;
+            }
+
+        }
+
     }
 
     public @NotNull ChatClient getClient() {
