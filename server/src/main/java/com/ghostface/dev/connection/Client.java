@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
 
@@ -25,9 +26,13 @@ public final class Client {
         chat.getClients().add(this);
     }
 
-    public void close() throws IOException {
+    public void close() throws ClosedChannelException {
         chat.getClients().remove(this);
-        channel.close();
+        try {
+            channel.close();
+        } catch (IOException e) {
+            throw new ClosedChannelException();
+        }
     }
 
     // getters
