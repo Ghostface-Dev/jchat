@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.nio.channels.*;
 import java.util.Iterator;
+import java.util.Optional;
 
 
 final class ChatServerThread extends Thread {
@@ -68,54 +69,50 @@ final class ChatServerThread extends Thread {
                                 chat.getClients().add(client);
                             }
 
-                            if (key.isReadable() && key.isWritable()) {
+                            if (key.isReadable()) {
+                                @Nullable Optional<@NotNull Client> client = chat.getClient((SocketChannel) key.channel());
 
-                                @Nullable Client client = chat.getClient((SocketChannel) key.channel());
-                                if (client == null)
-                                    throw new SocketException();
-
-                                // users authentication
-                                if (!client.isAuthenticated()) {
+                                if (!client.isPresent())
+                                    throw new SocketException("Client does not exist");
+                                if (!client.get().isAuthenticated()) {
                                     @Nullable String username = protocol.read(key);
+
                                     if (username == null)
-                                        throw new SocketException();
+                                        throw new SocketException("Connection it took too long. Cannot read username");
 
-                                    boolean isUserExist = chat.getUsers().stream().anyMatch(user -> user.getUsername().equals(username));
+                                    @NotNull Optional<@NotNull User> user = chat.getUser(username);
 
-                                    if (!isUserExist) {
+                                    if (user.isPresent()) {
                                         protocol.write(false, key);
                                     } else {
-                                        @NotNull User user = new User(username, client);
-                                        chat.getUsers().add(user);
-                                        client.setAuthenticated(true);
+                                        @NotNull User newUser = new User(username, client.get());
+                                        chat.getUsers().add(newUser);
+                                        client.get().setAuthenticated(true);
+                                        protocol.write(true, key);
                                     }
+
                                 }
 
-                                // listen messages
-                                @Nullable String msg = protocol.read(key);
-                                if (msg == null)
-                                    throw new SocketException();
 
-                                @Nullable User user = client.getUser();
-                                if (user == null)
-                                    throw new SocketException();
-
-                                @NotNull Message message = new Message(msg, user);
-                                // send message for all
-                                protocol.broadcast(message, chat, key);
 
                             }
 
                         } catch (SocketException | ClosedChannelException e) {
                             @NotNull SocketChannel channel = (SocketChannel) key.channel();
-                            @Nullable Client c = chat.getClient(channel);
+                            @Nullable Optional<@NotNull Client> c = chat.getClient(channel);
                             log.info("{} Disconnect", channel.getLocalAddress());
-                            if (c != null) c.close();
-                            if (c == null) channel.close();
+                            if (c.isPresent()){
+                                c.get().close();
+                            } else {
+                                channel.close();
+                            }
                         }
                     }
                 }
 
+            } catch (ClosedSelectorException e) {
+                log.error("Selector error: {}", e.getMessage());
+                break;
             } catch (IOException e) {
                 log.error("A error occured: {}", e.getMessage());
             }

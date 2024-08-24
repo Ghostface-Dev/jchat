@@ -13,6 +13,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 
 import java.nio.channels.SocketChannel;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +25,11 @@ public final class ChatServer {
     private @Nullable ServerSocketChannel channel;
     private @Nullable Selector selector;
     private @Nullable Thread thread;
+
+    public ChatServer() {
+        clients.clear();
+        users.clear();
+    }
 
     public synchronized boolean start(@NotNull InetSocketAddress address) throws IOException {
         @Nullable ServerSocketChannel channel = getSocket();
@@ -69,8 +75,12 @@ public final class ChatServer {
         return true;
     }
 
-    public @Nullable Client getClient(@NotNull SocketChannel channel) {
-        return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst().orElse(null);
+    public @NotNull Optional<@NotNull Client> getClient(@NotNull SocketChannel channel) {
+        return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst();
+    }
+
+    public @NotNull Optional<@NotNull User> getUser(@NotNull String username) {
+        return users.stream().filter(user -> user.getUsername().equals(username)).findFirst();
     }
 
     public @NotNull Set<@NotNull User> getUsers() {

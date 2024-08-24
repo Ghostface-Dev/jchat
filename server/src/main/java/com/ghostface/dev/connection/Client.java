@@ -28,8 +28,11 @@ public final class Client {
 
     public void close() throws ClosedChannelException {
         chat.getClients().remove(this);
+        @Nullable User user = chat.getUsers().stream().filter(user1 -> user1.getClient().equals(this)).findFirst().orElse(null);
+
         try {
             channel.close();
+            if (user != null) chat.getUsers().remove(user);
         } catch (IOException e) {
             throw new ClosedChannelException();
         }

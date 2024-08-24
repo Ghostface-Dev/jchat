@@ -26,7 +26,7 @@ final class HandlerProtocol {
     public @NotNull SocketChannel accept(@NotNull SelectionKey key) throws IOException {
         @NotNull SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
         channel.configureBlocking(false);
-        channel.register(key.selector(), SelectionKey.OP_READ | SelectionKey.OP_WRITE, ByteBuffer.allocate(bufSize));
+        channel.register(key.selector(), SelectionKey.OP_READ);
 
         return channel;
     }
@@ -51,7 +51,6 @@ final class HandlerProtocol {
             buffer.clear();
             response = channel.read(buffer);
         }
-
         return builder.toString();
     }
 
