@@ -12,6 +12,8 @@ import java.io.IOException;
 
 import java.net.SocketException;
 import java.nio.channels.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -48,87 +50,94 @@ final class ChatServerThread extends Thread {
 
         while (server.socket().isBound() && selector.isOpen()) {
 
+            @NotNull Iterator<@NotNull SelectionKey> keyIterator;
+
             try {
-                if (selector.select() > 0) {
-                    @NotNull Iterator<@NotNull SelectionKey> keyIterator = selector.selectedKeys().iterator();
-
-                    while (keyIterator.hasNext()) {
-                        @NotNull HandlerProtocol protocol = new HandlerProtocol(4096); // 4kb
-                        @NotNull SelectionKey key = keyIterator.next();
-                        keyIterator.remove();
-
-                        try {
-                            if (!key.isValid()) {
-                                continue;
-                            }
-
-                            if (key.isAcceptable()) {
-                                @NotNull SocketChannel channel = protocol.accept(key);
-                                log.info("{} Trying to connect", channel.getLocalAddress());
-                                @NotNull Client client = new Client(chat, channel);
-                                chat.getClients().add(client);
-                            }
-
-                            if (key.isReadable()) {
-                                @Nullable Optional<@NotNull Client> client = chat.getClient((SocketChannel) key.channel());
-
-                                if (!client.isPresent())
-                                    throw new SocketException("Client is unknow");
-                                if (!client.get().isAuthenticated()) {
-                                    @Nullable String username = protocol.read(key);
-
-                                    if (username == null)
-                                        throw new SocketException("Connection it took too long. Cannot read username");
-
-                                    @NotNull Optional<@NotNull User> user = chat.getUser(username);
-
-                                    if (user.isPresent()) {
-                                        protocol.write(false, key);
-                                    } else {
-                                        @NotNull User newUser = new User(username, client.get());
-                                        chat.getUsers().add(newUser);
-                                        client.get().setAuthenticated(true);
-                                        protocol.write(true, key);
-                                    }
-
-                                }
-
-                                // msg
-
-                                @NotNull Optional<@NotNull User> user = client.get().getUser();
-
-                                if (!user.isPresent()) {
-                                    throw new SocketException("User is unknow");
-                                } else while (user.get().getClient().isAuthenticated()){
-                                    @Nullable String msg = protocol.read(key);
-                                    if (msg != null) {
-                                        @NotNull Message message = new Message(msg, user.get());
-                                        protocol.broadcast(message, chat, key);
-                                    }
-                                }
-
-                            }
-
-                        } catch (SocketException | ClosedChannelException e) {
-                            @NotNull SocketChannel channel = (SocketChannel) key.channel();
-                            @Nullable Optional<@NotNull Client> c = chat.getClient(channel);
-                            log.info("{} Disconnect", channel.getLocalAddress());
-                            if (c.isPresent()){
-                                c.get().close();
-                            } else {
-                                channel.close();
-                            }
-                        }
-                    }
-                }
-
+                int readyChannels = selector.select();
+                if (readyChannels == 0) continue;
+                keyIterator = selector.selectedKeys().iterator();
             } catch (ClosedSelectorException e) {
-                log.error("Selector error: {}", e.getMessage());
                 break;
             } catch (IOException e) {
-                log.error("A error occured: {}", e.getMessage());
+                continue;
             }
+
+            while (keyIterator.hasNext()) {
+                @NotNull SelectionKey key = keyIterator.next();
+                keyIterator.remove();
+
+                try {
+
+                    if (key.isAcceptable()) {
+                        @NotNull SocketChannel channel = server.accept();
+                        channel.configureBlocking(false);
+                        channel.register(selector, SelectionKey.OP_READ);
+                        @NotNull Client client = new Client(chat, channel);
+
+                        if (!client.isAuthenticated()) {
+                            @Nullable String username = client.read(key);
+
+                            while (username == null) {
+                                username = client.read(key);
+                            }
+
+                            @NotNull String finalUsername = username;
+                            boolean isUserExist = chat.getUsers().stream().anyMatch(user -> user.getUsername().equals(finalUsername));
+
+                            if (isUserExist) {
+                                client.write(false);
+                                throw new SocketException("Failed to authenticate");
+                            } else {
+                                @NotNull User user = new User(finalUsername, client);
+                                chat.getClients().add(client);
+                                chat.getUsers().add(user);
+                                client.write(true);
+                            }
+
+                        }
+
+                    }
+
+                    if (key.isReadable()) {
+
+                        @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
+                        @NotNull Optional<@NotNull User> optionalUser = chat.getUser((SocketChannel) key.channel());
+
+                        while (optionalClient.isPresent() && optionalUser.isPresent()) {
+                            @Nullable String message = optionalClient.get().read(key);
+
+                            if (message != null) {
+                                @NotNull Message msg = new Message(message, optionalUser.get());
+                                chat.broadcast(msg);
+                            }
+                        }
+
+                        throw new SocketException("Connection lost while read client message");
+                    }
+
+                } catch (SocketException | ClosedChannelException e) {
+                    log.error(e.getMessage());
+                    closeClient(key);
+                } catch (IOException ignore) {
+                }
+
+            }
+
         }
+
+    }
+
+    private void closeClient(@NotNull SelectionKey key) {
+        @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
+        try {
+            if (!optionalClient.isPresent()) {
+                @NotNull SocketChannel channel = (SocketChannel) key.channel();
+                log.info("{} Disconnect", channel.getLocalAddress());
+                channel.close();
+            } else {
+                optionalClient.get().close();
+            }
+        } catch (IOException ignore) {}
     }
 
     // getters

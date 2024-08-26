@@ -1,6 +1,7 @@
 package com.ghostface.dev.server;
 
 import com.ghostface.dev.connection.Client;
+import com.ghostface.dev.entity.Message;
 import com.ghostface.dev.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -8,11 +9,9 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.*;
 
-import java.nio.channels.SocketChannel;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,11 +24,6 @@ public final class ChatServer {
     private @Nullable ServerSocketChannel channel;
     private @Nullable Selector selector;
     private @Nullable Thread thread;
-
-    public ChatServer() {
-        clients.clear();
-        users.clear();
-    }
 
     public synchronized boolean start(@NotNull InetSocketAddress address) throws IOException {
         @Nullable ServerSocketChannel channel = getSocket();
@@ -75,12 +69,22 @@ public final class ChatServer {
         return true;
     }
 
+    public void broadcast(@NotNull Message msg) throws ClosedChannelException {
+        for (@NotNull Client client : clients) {
+            try {
+                client.write(msg.toString());
+            } catch (IOException e) {
+                throw new ClosedChannelException();
+            }
+        }
+    }
+
     public @NotNull Optional<@NotNull Client> getClient(@NotNull SocketChannel channel) {
         return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst();
     }
 
-    public @NotNull Optional<@NotNull User> getUser(@NotNull String username) {
-        return users.stream().filter(user -> user.getUsername().equals(username)).findFirst();
+    public @NotNull Optional<@NotNull User> getUser(@NotNull SocketChannel channel) {
+        return users.stream().filter(user -> user.getClient().getChannel().equals(channel)).findFirst();
     }
 
     public @NotNull Set<@NotNull User> getUsers() {
