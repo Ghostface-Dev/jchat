@@ -41,7 +41,6 @@ final class ChatServerThread extends Thread {
 
     @Override
     public void run() {
-
         try {
             log.info("Server is running on {} port", server.getLocalAddress());
         } catch (IOException e) {
@@ -49,7 +48,6 @@ final class ChatServerThread extends Thread {
         }
 
         while (server.socket().isBound() && selector.isOpen()) {
-
             @NotNull Iterator<@NotNull SelectionKey> keyIterator;
 
             try {
@@ -67,7 +65,6 @@ final class ChatServerThread extends Thread {
                 keyIterator.remove();
 
                 try {
-
                     if (key.isAcceptable()) {
                         @NotNull SocketChannel channel = server.accept();
                         channel.configureBlocking(false);
@@ -95,17 +92,14 @@ final class ChatServerThread extends Thread {
                             }
 
                         }
-
                     }
 
                     if (key.isReadable()) {
-
                         @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
                         @NotNull Optional<@NotNull User> optionalUser = chat.getUser((SocketChannel) key.channel());
 
                         while (optionalClient.isPresent() && optionalUser.isPresent()) {
                             @Nullable String message = optionalClient.get().read(key);
-
                             if (message != null) {
                                 @NotNull Message msg = new Message(message, optionalUser.get());
                                 chat.broadcast(msg);
@@ -114,7 +108,6 @@ final class ChatServerThread extends Thread {
 
                         throw new SocketException("Connection lost while read client message");
                     }
-
                 } catch (SocketException | ClosedChannelException e) {
                     log.error(e.getMessage());
                     closeClient(key);

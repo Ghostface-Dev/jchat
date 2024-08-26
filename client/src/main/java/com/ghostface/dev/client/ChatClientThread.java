@@ -72,7 +72,6 @@ final class ChatClientThread extends Thread {
                                 }
 
                                 Mensseger.write(username, channel);
-
                             } else {
                                 key.cancel();
                             }
@@ -80,33 +79,29 @@ final class ChatClientThread extends Thread {
 
                         if (key.isReadable()) {
 
-                            System.out.println("Checking...");
-                            Thread.sleep(1000);
-
                             if (!Boolean.parseBoolean(Mensseger.read(channel))) {
                                 System.err.println("Username Already exist");
                                 channel.close();
                             } else {
-                                System.out.println("Welcome ");
+                                System.out.println("Welcome");
                             }
 
                                 // msg
-                            while (selector.isOpen()) {
-
-                                new Thread(() -> {
-                                    @NotNull String msg = null;
-                                    try {
-                                        msg = in.readLine();
-                                        Mensseger.write(msg, channel);
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }).start();
+                            while (channel.finishConnect()) {
 
                                 @Nullable String response = Mensseger.read(channel);
 
                                 if (response != null)
                                     System.out.println(response);
+
+                                new Thread(() -> {
+                                    try {
+                                        @NotNull String msg = in.readLine();
+                                        Mensseger.write(msg, channel);
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    };
+                                }).start();
 
                             }
 
@@ -114,13 +109,12 @@ final class ChatClientThread extends Thread {
                     }
 
                 }
-            } catch (InterruptedException ignore) {
-
-            } catch (SocketException e) {
+            } catch (SocketException | RuntimeException e) {
                 System.err.println("Lost Connection");
                 break;
             } catch (IOException e) {
                 log.error(e.getMessage());
+                break;
             }
 
         }
