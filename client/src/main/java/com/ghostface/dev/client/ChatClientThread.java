@@ -49,6 +49,7 @@ final class ChatClientThread extends Thread {
             try {
                 if (selector.select() > 0) {
                     @NotNull Iterator<@NotNull SelectionKey> keyIterator = selector.selectedKeys().iterator();
+                    @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
                     while (keyIterator.hasNext()) {
                         @NotNull SelectionKey key = keyIterator.next();
@@ -62,7 +63,6 @@ final class ChatClientThread extends Thread {
                                 channel.register(selector, SelectionKey.OP_READ);
                                 log.info("Connection {} is Succesfull", channel.getLocalAddress());
 
-                                @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
                                 System.out.print("Enter the username: ");
                                 @NotNull String username = in.readLine();
 
@@ -90,9 +90,25 @@ final class ChatClientThread extends Thread {
                                 System.out.println("Welcome ");
                             }
 
-                            // msg
+                                // msg
+                            while (selector.isOpen()) {
 
+                                new Thread(() -> {
+                                    @NotNull String msg = null;
+                                    try {
+                                        msg = in.readLine();
+                                        Mensseger.write(msg, channel);
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }).start();
 
+                                @Nullable String response = Mensseger.read(channel);
+
+                                if (response != null)
+                                    System.out.println(response);
+
+                            }
 
                         }
                     }

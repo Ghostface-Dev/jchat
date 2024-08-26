@@ -17,7 +17,6 @@ public final class User {
         this.username = username;
         this.client = client;
         this.time = OffsetDateTime.now();
-        client.getChat().getUsers().add(this);
     }
 
     // getters

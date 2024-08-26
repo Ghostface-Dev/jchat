@@ -73,7 +73,7 @@ final class ChatServerThread extends Thread {
                                 @Nullable Optional<@NotNull Client> client = chat.getClient((SocketChannel) key.channel());
 
                                 if (!client.isPresent())
-                                    throw new SocketException("Client does not exist");
+                                    throw new SocketException("Client is unknow");
                                 if (!client.get().isAuthenticated()) {
                                     @Nullable String username = protocol.read(key);
 
@@ -93,7 +93,19 @@ final class ChatServerThread extends Thread {
 
                                 }
 
+                                // msg
 
+                                @NotNull Optional<@NotNull User> user = client.get().getUser();
+
+                                if (!user.isPresent()) {
+                                    throw new SocketException("User is unknow");
+                                } else while (user.get().getClient().isAuthenticated()){
+                                    @Nullable String msg = protocol.read(key);
+                                    if (msg != null) {
+                                        @NotNull Message message = new Message(msg, user.get());
+                                        protocol.broadcast(message, chat, key);
+                                    }
+                                }
 
                             }
 

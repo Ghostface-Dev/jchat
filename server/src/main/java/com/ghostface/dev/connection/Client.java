@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class Client {
 
@@ -23,7 +24,6 @@ public final class Client {
         if (!channel.socket().isConnected()) throw new IllegalArgumentException("Channel is not active");
 
         this.channel = channel;
-        chat.getClients().add(this);
     }
 
     public void close() throws ClosedChannelException {
@@ -40,16 +40,16 @@ public final class Client {
 
     // getters
 
+    public @NotNull Optional<@NotNull User> getUser() {
+        return chat.getUsers().stream().filter(user1 -> user1.getClient().equals(this)).findFirst();
+    }
+
     public @NotNull ChatServer getChat() {
         return chat;
     }
 
     public @NotNull SocketChannel getChannel() {
         return channel;
-    }
-
-    public @Nullable User getUser() {
-        return user;
     }
 
     public void setUser(@Nullable User user) {
