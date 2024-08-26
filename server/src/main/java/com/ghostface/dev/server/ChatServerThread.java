@@ -12,8 +12,6 @@ import java.io.IOException;
 
 import java.net.SocketException;
 import java.nio.channels.*;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Optional;
 
@@ -51,10 +49,10 @@ final class ChatServerThread extends Thread {
             @NotNull Iterator<@NotNull SelectionKey> keyIterator;
 
             try {
-                int readyChannels = selector.select();
-                if (readyChannels == 0) continue;
+                int ready = selector.select();
+                if (ready == 0) continue;
                 keyIterator = selector.selectedKeys().iterator();
-            } catch (ClosedSelectorException e) {
+            } catch (ClosedChannelException e) {
                 break;
             } catch (IOException e) {
                 continue;
@@ -70,48 +68,68 @@ final class ChatServerThread extends Thread {
                         channel.configureBlocking(false);
                         channel.register(selector, SelectionKey.OP_READ);
                         @NotNull Client client = new Client(chat, channel);
-
-                        if (!client.isAuthenticated()) {
-                            @Nullable String username = client.read(key);
-
-                            while (username == null) {
-                                username = client.read(key);
-                            }
-
-                            @NotNull String finalUsername = username;
-                            boolean isUserExist = chat.getUsers().stream().anyMatch(user -> user.getUsername().equals(finalUsername));
-
-                            if (isUserExist) {
-                                client.write(false);
-                                throw new SocketException("Failed to authenticate");
-                            } else {
-                                @NotNull User user = new User(finalUsername, client);
-                                chat.getClients().add(client);
-                                chat.getUsers().add(user);
-                                client.write(true);
-                            }
-
-                        }
+                        chat.getClients().add(client);
                     }
 
                     if (key.isReadable()) {
                         @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
-                        @NotNull Optional<@NotNull User> optionalUser = chat.getUser((SocketChannel) key.channel());
 
-                        while (optionalClient.isPresent() && optionalUser.isPresent()) {
-                            @Nullable String message = optionalClient.get().read(key);
-                            if (message != null) {
-                                @NotNull Message msg = new Message(message, optionalUser.get());
+                        if (!optionalClient.isPresent()) throw new ClosedChannelException();
+
+                        @NotNull Client client = optionalClient.get();
+
+                        if (!client.isAuthenticated()) {
+                            @Nullable String username = client.read(key);
+                            int attempts = 0;
+
+                            while (username == null && attempts < 5) {
+                                username = client.read(key);
+                                attempts++;
+                            }
+
+                            if (username == null) {
+                                client.close();
+                                break;
+                            }
+
+                            @NotNull User user = new User(username, client);
+
+                            if (chat.getUsers().contains(user)) {
+                                client.write(false);
+                                log.info("Failed authentication of {}", client.getChannel().getLocalAddress());
+                                client.close();
+                            } else {
+                                chat.getUsers().add(user);
+                                client.setAuthenticated(true);
+                                chat.broadcast(user.getUsername() + "Joined");
+                                log.info("Success authentication of {}", client.getChannel().getLocalAddress());
+                            }
+
+                        } else while (client.getChannel().isOpen()) {
+                            @Nullable String content = client.read(key);
+                            @NotNull Optional<@NotNull User> optional = client.getUser();
+
+                            if (!optional.isPresent()) {
+                                client.close();
+                                break;
+                            }
+
+                            if (content != null) {
+                                @NotNull Message msg = new Message(content, optional.get());
                                 chat.broadcast(msg);
                             }
+
                         }
 
-                        throw new SocketException("Connection lost while read client message");
                     }
-                } catch (SocketException | ClosedChannelException e) {
+
+                } catch (ClosedChannelException e) {
+                    @NotNull SocketChannel channel = (SocketChannel) key.channel();
+                    try {
+                        channel.close();
+                    } catch (IOException ignore) {}
+                } catch (IOException e) {
                     log.error(e.getMessage());
-                    closeClient(key);
-                } catch (IOException ignore) {
                 }
 
             }

@@ -79,6 +79,16 @@ public final class ChatServer {
         }
     }
 
+    public void broadcast(@NotNull String msg) throws ClosedChannelException {
+        for (@NotNull Client client : clients) {
+            try {
+                client.write(msg);
+            } catch (IOException e) {
+                throw new ClosedChannelException();
+            }
+        }
+    }
+
     public @NotNull Optional<@NotNull Client> getClient(@NotNull SocketChannel channel) {
         return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst();
     }

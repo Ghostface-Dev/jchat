@@ -4,6 +4,8 @@ import com.ghostface.dev.entity.User;
 import com.ghostface.dev.server.ChatServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketException;
@@ -16,6 +18,8 @@ import java.util.Objects;
 import java.util.Optional;
 
 public final class Client {
+
+    private static final @NotNull Logger log = LoggerFactory.getLogger(Client.class);
 
     private final @NotNull ChatServer chat;
     private final @NotNull SocketChannel channel;
@@ -33,6 +37,7 @@ public final class Client {
     public void close() {
         @Nullable User user = chat.getUsers().stream().filter(user1 -> user1.getClient().equals(this)).findFirst().orElse(null);
         try {
+            log.info("{} Disconect", channel.getLocalAddress());
             channel.close();
             if (user != null) chat.getUsers().remove(user);
         } catch (IOException ignore) {}

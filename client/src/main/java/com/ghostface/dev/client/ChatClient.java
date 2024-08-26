@@ -29,7 +29,6 @@ public final class ChatClient {
         channel.register(selector, SelectionKey.OP_CONNECT);
         channel.connect(address);
 
-
         this.thread = new ChatClientThread(this);
         this.thread.start();
 
