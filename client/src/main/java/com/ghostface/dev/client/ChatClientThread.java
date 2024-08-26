@@ -44,7 +44,6 @@ final class ChatClientThread extends Thread {
     public void run() {
         while (channel.isOpen()) {
             @NotNull Iterator<@NotNull SelectionKey> keyIterator;
-            @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
 
             try {
                 int ready = selector.select();
@@ -66,7 +65,10 @@ final class ChatClientThread extends Thread {
                         if (channel.finishConnect()) {
                             channel.register(selector, SelectionKey.OP_READ);
                             log.info("Connection {} is succesful", channel.getLocalAddress());
+                            @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+
                             System.out.print("Enter the username: ");
+
                             @NotNull String username = in.readLine();
 
                             while (!Username.validate(username)) {
@@ -82,36 +84,39 @@ final class ChatClientThread extends Thread {
 
                         if (!authenticated) {
 
-                            @Nullable String responseAuthentication = Mensseger.read(channel);
+                            @Nullable String response = Mensseger.read(channel);
 
-                            System.out.println(responseAuthentication);
+                            System.out.println(response);
 
-                            if (!Boolean.parseBoolean(responseAuthentication)) {
+                            if (!Boolean.parseBoolean(response)) {
                                 System.err.println("Username Already exist");
                                 channel.close();
                             } else {
                                 authenticated = true;
-                            }
-                        }
 
-                        // message
-                        if (channel.isOpen()) {
-                            @Nullable String response = Mensseger.read(channel);
-
-                            if (response != null)
-                                System.out.println(response);
-
-                            new Thread(() -> {
-                                try {
-                                    @NotNull String msg = in.readLine();
-                                    Mensseger.write(msg, channel);
-                                } catch (IOException e) {
-                                    log.error(e.getMessage());
+                                new Thread(() -> {
                                     try {
-                                        channel.close();
-                                    } catch (IOException ignore) {}
-                                };
-                            }).start();
+                                        @NotNull BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+                                        while (channel.isOpen()) {
+                                            @NotNull String msg = in.readLine();
+                                            synchronized (channel) {
+                                                Mensseger.write(msg, channel);
+                                            }
+                                        }
+                                    } catch (IOException e) {
+                                        log.error("Error reading/writing message: {}", e.getMessage());
+                                        try {
+                                            channel.close();
+                                        } catch (IOException ignore) {}
+                                    }
+                                }).start();
+
+                            }
+                        } else {
+                            @Nullable String response = Mensseger.read(channel);
+                            if (response != null) {
+                                System.out.println(response);
+                            }
                         }
 
                     }
@@ -120,7 +125,8 @@ final class ChatClientThread extends Thread {
                     log.error("ERRO DO CARALHO -> {}", e.getMessage());
                     try {
                         channel.close();
-                    } catch (IOException ignore) {}
+                    } catch (IOException ignore) {
+                    }
                     break;
                 }
 

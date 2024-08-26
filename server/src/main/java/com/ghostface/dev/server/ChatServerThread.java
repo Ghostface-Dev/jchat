@@ -112,7 +112,7 @@ final class ChatServerThread extends Thread {
                                 chat.broadcast(user.getUsername() + " Joined");
                             }
 
-                        } else if (client.getChannel().isOpen()) {
+                        } else {
                             @Nullable String content = client.read(key);
                             @NotNull Optional<@NotNull User> optional = client.getUser();
 
@@ -125,8 +125,6 @@ final class ChatServerThread extends Thread {
                             if (content != null) {
                                 @NotNull Message msg = new Message(content, optional.get());
                                 chat.broadcast(msg);
-                            } else {
-                                break;
                             }
                         }
 
