@@ -36,11 +36,11 @@ public final class Mensseger {
         return builder.toString();
     }
 
-    public static void write (@NotNull String s ,@NotNull SocketChannel channel) throws SocketException {
+    public static void write (@NotNull String s ,@NotNull SocketChannel channel) throws ClosedChannelException {
         try {
             channel.write(ByteBuffer.wrap(s.getBytes()));
         } catch (IOException e) {
-            throw new SocketException();
+            throw new ClosedChannelException();
         }
     }
 

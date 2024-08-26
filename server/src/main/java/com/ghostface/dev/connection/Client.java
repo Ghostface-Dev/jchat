@@ -45,26 +45,30 @@ public final class Client {
         chat.getClients().remove(this);
     }
 
-    public @Nullable String read(@NotNull SelectionKey key) throws IOException {
+    public @Nullable String read(@NotNull SelectionKey key) throws ClosedChannelException {
         @NotNull ByteBuffer buffer = ByteBuffer.allocate(4096);
         @NotNull StringBuilder builder = new StringBuilder();
 
         buffer.clear();
-        long response = channel.read(buffer);
+        try {
+            long response = channel.read(buffer);
 
-        if (response == -1) {
+            if (response == -1) {
+                throw new ClosedChannelException();
+            }
+            if (response == 0) {
+                return null;
+            }
+            while (response > 0) {
+                buffer.flip();
+                builder.append(StandardCharsets.UTF_8.decode(buffer));
+                buffer.clear();
+                response = channel.read(buffer);
+            }
+            return builder.toString();
+        } catch (IOException e) {
             throw new ClosedChannelException();
         }
-        if (response == 0) {
-            return null;
-        }
-        while (response > 0) {
-            buffer.flip();
-            builder.append(StandardCharsets.UTF_8.decode(buffer));
-            buffer.clear();
-            response = channel.read(buffer);
-        }
-        return builder.toString();
     }
 
     public void write(@NotNull String s) throws ClosedChannelException {

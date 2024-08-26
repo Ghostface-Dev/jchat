@@ -62,32 +62,38 @@ final class ChatServerThread extends Thread {
                 @NotNull SelectionKey key = keyIterator.next();
                 keyIterator.remove();
 
-                try {
-                    if (key.isAcceptable()) {
+                if (key.isAcceptable()) {
+                    try {
                         @NotNull SocketChannel channel = server.accept();
                         channel.configureBlocking(false);
                         channel.register(selector, SelectionKey.OP_READ);
                         @NotNull Client client = new Client(chat, channel);
                         chat.getClients().add(client);
+                        log.info("Accepted new client: {}", channel.getRemoteAddress());
+                    } catch (@NotNull Throwable throwable) {
+                        log.error("Error accepting client: {}", throwable.getMessage());
+                        @NotNull SocketChannel channel = (SocketChannel) key.channel();
+                        try {channel.close();} catch (IOException ignore) {}
                     }
+                }
 
-                    if (key.isReadable()) {
-                        @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
+                if (key.isReadable()) {
+                    @NotNull Optional<@NotNull Client> optionalClient = chat.getClient((SocketChannel) key.channel());
 
-                        if (!optionalClient.isPresent()) throw new ClosedChannelException();
+                    try {
+                        if (!optionalClient.isPresent()) {
+                            log.error("Client not found for key: {}", key);
+                            closeClient(key);
+                            return;
+                        }
 
                         @NotNull Client client = optionalClient.get();
 
                         if (!client.isAuthenticated()) {
                             @Nullable String username = client.read(key);
-                            int attempts = 0;
-
-                            while (username == null && attempts < 5) {
-                                username = client.read(key);
-                                attempts++;
-                            }
 
                             if (username == null) {
+                                log.debug("Username is null after multiple attempts, closing client.");
                                 client.close();
                                 break;
                             }
@@ -96,20 +102,22 @@ final class ChatServerThread extends Thread {
 
                             if (chat.getUsers().contains(user)) {
                                 client.write(false);
-                                log.info("Failed authentication of {}", client.getChannel().getLocalAddress());
+                                log.info("Failed authentication for {}", client.getChannel().getLocalAddress());
                                 client.close();
                             } else {
+                                client.write(true);
                                 chat.getUsers().add(user);
                                 client.setAuthenticated(true);
-                                chat.broadcast(user.getUsername() + "Joined");
-                                log.info("Success authentication of {}", client.getChannel().getLocalAddress());
+                                log.info("Success authentication for {}", client.getChannel().getLocalAddress());
+                                chat.broadcast(user.getUsername() + " Joined");
                             }
 
-                        } else while (client.getChannel().isOpen()) {
+                        } else if (client.getChannel().isOpen()) {
                             @Nullable String content = client.read(key);
                             @NotNull Optional<@NotNull User> optional = client.getUser();
 
                             if (!optional.isPresent()) {
+                                log.error("User not found for client: {}", client.getChannel().getRemoteAddress());
                                 client.close();
                                 break;
                             }
@@ -117,21 +125,17 @@ final class ChatServerThread extends Thread {
                             if (content != null) {
                                 @NotNull Message msg = new Message(content, optional.get());
                                 chat.broadcast(msg);
+                            } else {
+                                break;
                             }
-
                         }
 
+                    } catch (IOException e) {
+                        @NotNull Optional<@NotNull Client> optional = chat.getClient((SocketChannel) key.channel());
+                        optional.ifPresent(Client::close);
                     }
 
-                } catch (ClosedChannelException e) {
-                    @NotNull SocketChannel channel = (SocketChannel) key.channel();
-                    try {
-                        channel.close();
-                    } catch (IOException ignore) {}
-                } catch (IOException e) {
-                    log.error(e.getMessage());
                 }
-
             }
 
         }
