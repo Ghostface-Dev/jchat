@@ -9,25 +9,29 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ServerSystem {
 
+    private final @NotNull Map<@NotNull User, @NotNull String> users = new HashMap<>();
     private final @NotNull Set<@NotNull ClientConnection> clients = ConcurrentHashMap.newKeySet();
 
     private final @NotNull InetSocketAddress address;
+    private final @NotNull Thread thread = new ServerSystemThread(this);
     private @Nullable Selector selector;
     private @Nullable ServerSocketChannel channel;
-
-    private final @NotNull Thread thread = new ServerSystemThread();
 
     public ServerSystem(@NotNull InetSocketAddress address) {
         this.address = address;
     }
 
     public boolean start() throws IOException {
+
         if (getChannel() != null || getSelector() != null) return false;
 
         selector = Selector.open();
@@ -65,10 +69,34 @@ public final class ServerSystem {
         return true;
     }
 
+    public @NotNull Optional<@NotNull ClientConnection> getConnection(@NotNull SocketChannel channel) {
+        return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst();
+    }
+
+    public @NotNull Optional<@NotNull User> getUser(@NotNull SocketChannel channel) {
+        return users.keySet().stream().filter(user -> user.getConnection().getChannel().equals(channel)).findFirst();
+    }
+
+//    public @NotNull CompletableFuture<@NotNull Boolean> register(@NotNull String username, @NotNull String password) {
+//
+//        return CompletableFuture.supplyAsync(() -> {
+//
+//            Optional<@NotNull User> optionalUser = users.keySet().stream().filter(user -> user.getUsername().equals(username)).findFirst();
+//
+//            return !optionalUser.isPresent();
+//
+//        });
+//
+//    }
+
     // Getters
 
     public @NotNull Set<@NotNull ClientConnection> getClients() {
         return clients;
+    }
+
+    public @NotNull Map<@NotNull User, @NotNull String> getUsers() {
+        return users;
     }
 
     public @Nullable Selector getSelector() {
@@ -78,4 +106,7 @@ public final class ServerSystem {
     public @Nullable ServerSocketChannel getChannel() {
         return channel;
     }
+
+
+
 }

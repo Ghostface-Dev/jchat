@@ -1,11 +1,15 @@
 package com.ghostface.dev.connection;
 
-import com.ghostface.dev.entity.User;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Range;
 
 import java.io.IOException;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 public final class ClientConnection {
@@ -21,6 +25,29 @@ public final class ClientConnection {
     public void close() throws IOException {
         channel.close();
         system.getClients().remove(this);
+    }
+
+    public @Nullable String read(@NotNull SelectionKey key) throws IOException {
+        @NotNull ByteBuffer buffer = ByteBuffer.allocate(4096);
+        @NotNull StringBuilder builder = new StringBuilder();
+        buffer.clear();
+
+        @Range(from = 0, to = Integer.MAX_VALUE)
+        int response = channel.read(buffer);
+
+        if (response == -1) {
+            throw new SocketException();
+        } else if (response == 0) {
+            return null;
+        } else while (response > 0) {
+            buffer.flip();
+            builder.append(StandardCharsets.UTF_8.decode(buffer));
+            buffer.clear();
+
+            response = channel.read(buffer);
+        }
+
+        return builder.toString();
     }
 
     // Getters

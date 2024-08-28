@@ -11,10 +11,10 @@ public final class Message {
     private final @NotNull String content;
     private final @NotNull OffsetDateTime time;
 
-    public Message(@NotNull User user, @NotNull String content) {
+    public Message(@NotNull User user, @NotNull String content, @NotNull OffsetDateTime dateTime) {
         this.user = user;
         this.content = content;
-        this.time = OffsetDateTime.now();
+        time = dateTime;
     }
 
     public @NotNull User getUser() {
