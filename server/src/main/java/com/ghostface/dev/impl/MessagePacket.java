@@ -1,19 +1,17 @@
 package com.ghostface.dev.impl;
 
-import com.ghostface.dev.connection.ClientConnection;
-import com.ghostface.dev.connection.PacketConnection;
+import com.ghostface.dev.comunication.PacketComunication;
 import com.ghostface.dev.connection.ServerSystem;
 import com.ghostface.dev.entity.Message;
-import com.ghostface.dev.entity.User;
+
 import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.channels.SocketChannel;
-import java.time.OffsetDateTime;
-import java.util.Optional;
 
-public final class MessagePacket implements PacketConnection {
+
+public final class MessagePacket extends PacketComunication {
 
     private final @NotNull String content;
     private final @NotNull String time;
@@ -31,22 +29,23 @@ public final class MessagePacket implements PacketConnection {
 
     @Override
     public boolean response(@NotNull ServerSystem system) {
-
-        @NotNull Optional<@NotNull User> optional = system.getUser(channel);
-
-        if (!optional.isPresent()) {
-            return false;
-        } else {
-            @NotNull User user = optional.get();
-            message = new Message(user, content, OffsetDateTime.parse(time));
-        }
-
-        return true;
+        return false;
     }
 
     @Override
-    public @Nullable Message get() {
-        return message;
+    public boolean isAuthentication() {
+        return false;
     }
+
+    @Override
+    public boolean isRegister() {
+        return false;
+    }
+
+    @Override
+    public boolean isMessage() {
+        return true;
+    }
+
 
 }
