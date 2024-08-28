@@ -1,55 +1,92 @@
 package com.ghostface.dev.account;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-
-public final class Email implements CharSequence {
+public class Email implements CharSequence {
 
     // static initializer
 
-    public static boolean validate(@NotNull String email) {
+    public static boolean validate(@NotNull String string) {
 
-        @NotNull String string = email.replace("(dot)", "\\.").replace("(at)", "@");
-        if (string.length() > 254)
+        @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
+
+        if (email.length() > 254) {
             return false;
-
-        @NotNull String[] parts = string.split("@");
-        if (parts.length != 2)
+        } else if (email.split("@").length != 2) {
             return false;
+        } else {
 
-        @NotNull String username = parts[0];
-        if (!username.matches("^[a-zA-Z0-9]{1,64}$"))
-            return false;
+            @NotNull String[] parts = email.split("@");
+            @NotNull String[] dots = parts[1].split("\\.");
 
-        @NotNull String[] rest = parts[1].split("\\.", 2);
+            if (dots.length <2 || dots.length > 3) {
+                return false;
+            }
 
-        @NotNull String sld = rest[0];
-        if (!sld.matches("^[a-zA-Z0-9]{1,64}$"))
-            return false;
+            @NotNull String name = parts[0];
+            @NotNull String SLD;
+            @NotNull String TLD;
 
-        @NotNull String tld = rest[1];
-        return tld.matches("^[a-z.]{2,63}$") && tld.split("\\.").length <= 2;
+            if (dots.length == 3) {
+                SLD = dots[0] + "." + dots[1];
+                TLD = dots[2];
+            } else {
+                SLD = dots[0];
+                TLD = dots[1];
+            }
+
+            if (!name.matches("[a-zA-Z0-9._%+-]{1,64}")) {
+                return false;
+            } else if (!SLD.matches("^(?!-)[a-zA-Z0-9-_.]{1,63}(?<!-)$")) {
+                return false;
+            } else if (!TLD.matches("^[^0-9@#\"'\\\\$%]*$")) {
+                return false;
+            }
+
+        }
+        return true;
     }
 
-
-    public static @Nullable Email create(@NotNull String username, @NotNull String SLD, @NotNull String TDL) {
-
-        if (SLD.startsWith("@")) {
-            SLD = SLD.replaceFirst("@", "");
+    public static @NotNull Email parse(@NotNull String string) {
+        if (string.length() > 254) {
+            throw new IllegalArgumentException("Email too long");
         }
 
-        if (TDL.startsWith(".")) {
-            TDL = TDL.replaceFirst("\\.", "");
+        @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
+
+        if (validate(email)) {
+            @NotNull String[] parts = email.split("@");
+            @NotNull String[] dots = parts[1].split("\\.");
+
+            @NotNull String name = parts[0];
+            @NotNull String SLD;
+            @NotNull String TLD;
+
+            if (dots.length == 3) {
+                SLD = dots[0] + "." + dots[1];
+                TLD = dots[2];
+            } else {
+                SLD = dots[0];
+                TLD = dots[1];
+            }
+
+            return new Email(name, SLD, TLD);
+        } else {
+            throw new IllegalArgumentException("Email is not valid");
         }
 
-        @NotNull String email = username + "@" + SLD + "." + TDL;
+    }
 
-        if (!validate(email)) {
-            return null;
+    public static @NotNull Email create(@NotNull String string) {
+
+        @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
+
+        if (validate(email)) {
+            return parse(email);
+        } else {
+           throw new IllegalArgumentException("Email is not valid");
         }
 
-        return new Email(username, SLD, TDL);
     }
 
     // Object
@@ -58,7 +95,7 @@ public final class Email implements CharSequence {
     private final @NotNull String SLD;
     private final @NotNull String TDL;
 
-    Email(@NotNull String username, @NotNull String sld, @NotNull String tdl) {
+    protected Email(@NotNull String username, @NotNull String sld, @NotNull String tdl) {
         this.username = username;
         this.SLD = sld;
         this.TDL = tdl;
