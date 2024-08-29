@@ -1,6 +1,9 @@
-package com.ghostface.dev.account;
+package com.ghostface.dev.entity;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class Email implements CharSequence {
 
@@ -134,5 +137,18 @@ public class Email implements CharSequence {
     @Override
     public @NotNull String toString() {
         return username + "@" + SLD + "." + TDL;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        @NotNull Email email = (Email) object;
+        return Objects.equals(username, email.username) && Objects.equals(SLD, email.SLD) && Objects.equals(TDL, email.TDL);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(username, SLD, TDL);
     }
 }
