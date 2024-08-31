@@ -56,4 +56,8 @@ public class PacketValidator {
         REGISTRY,
     }
 
+    private PacketValidator() {
+        throw new UnsupportedOperationException();
+    }
+
 }

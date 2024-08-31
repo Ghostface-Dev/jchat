@@ -11,6 +11,7 @@ public abstract class Packet {
     protected final @NotNull Type type;
 
     protected Packet( @NotNull JsonObject data, @NotNull Type type) {
+        data.keySet().clear();
         this.data = data;
         this.type = type;
     }

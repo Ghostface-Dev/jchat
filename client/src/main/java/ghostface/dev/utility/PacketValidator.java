@@ -48,4 +48,7 @@ public final class PacketValidator {
         DISCONNECT,
     }
 
+    private PacketValidator() {
+        throw new UnsupportedOperationException();
+    }
 }
