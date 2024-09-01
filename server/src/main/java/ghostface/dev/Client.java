@@ -1,15 +1,14 @@
 package ghostface.dev;
 
+import ghostface.dev.entity.Message;
 import ghostface.dev.server.ServerJChat;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
 
 import java.io.IOException;
-import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
@@ -57,6 +56,18 @@ public final class Client {
             return builder.toString();
         } catch (IOException e) {
             throw new ClosedChannelException();
+        }
+    }
+
+    public void write(@NotNull String string) throws IOException {
+        channel.write(ByteBuffer.wrap(string.getBytes()));
+    }
+
+    public void write(@NotNull Message message) throws IOException {
+        for (@NotNull Client client : chat.getClients()) {
+            if (!client.equals(this)) {
+                channel.write(ByteBuffer.wrap(message.toString().getBytes()));
+            }
         }
     }
 
