@@ -9,8 +9,7 @@ public class Email implements CharSequence {
 
     // static initializer
 
-    public static boolean validate(@NotNull String string) {
-
+    public static boolean isValid(@NotNull String string) {
         @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
 
         if (email.length() > 254) {
@@ -57,7 +56,7 @@ public class Email implements CharSequence {
 
         @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
 
-        if (validate(email)) {
+        if (isValid(email)) {
             @NotNull String[] parts = email.split("@");
             @NotNull String[] dots = parts[1].split("\\.");
 
@@ -75,21 +74,8 @@ public class Email implements CharSequence {
 
             return new Email(name, SLD, TLD);
         } else {
-            throw new IllegalArgumentException("Email is not valid");
+            throw new IllegalArgumentException("Cannot parse '" + string + "' as email");
         }
-
-    }
-
-    public static @NotNull Email create(@NotNull String string) {
-
-        @NotNull String email = string.replace("(dot)", "\\.").replace("(at)", "@");
-
-        if (validate(email)) {
-            return parse(email);
-        } else {
-            throw new IllegalArgumentException("Email is not valid");
-        }
-
     }
 
     // Object
@@ -99,6 +85,10 @@ public class Email implements CharSequence {
     private final @NotNull String TDL;
 
     public Email(@NotNull String username, @NotNull String sld, @NotNull String tdl) {
+        @NotNull String string = username + "@" + sld + "." + tdl;
+        if (!isValid(string)) {
+            throw new IllegalArgumentException("Email '" + string + "' is not valid");
+        }
         this.username = username;
         this.SLD = sld;
         this.TDL = tdl;

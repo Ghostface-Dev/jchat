@@ -3,12 +3,12 @@ package ghostface.dev.packet;
 import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 
-public final class FailedPacket extends Packet {
+public final class ConnectionPacket extends Packet {
 
     private final @NotNull Response response;
 
-    public FailedPacket(@NotNull Response response) {
-        super(new JsonObject(), Type.FAILED);
+    public ConnectionPacket(@NotNull Response response) {
+        super(new JsonObject(), Type.CONNECTION);
         this.response = response;
         data.addProperty("type", getType().name().toLowerCase());
         data.addProperty("response", getResponse().name().toLowerCase());
@@ -22,6 +22,7 @@ public final class FailedPacket extends Packet {
         NOT_FOUND,
         EXISTING_USERNAME,
         EXISTING_EMAIL,
+        SUCCESS,
         DISCONNECT,
     }
 

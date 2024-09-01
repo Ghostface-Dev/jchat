@@ -3,9 +3,6 @@ package ghostface.dev.utility;
 import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeParseException;
-
 public final class PacketValidator {
 
     public static boolean isServerMessage(@NotNull JsonObject object) {
@@ -21,8 +18,8 @@ public final class PacketValidator {
         return true;
     }
 
-    public static boolean isFailed(@NotNull JsonObject object) {
-        if (!object.has("type") || !object.get("type").getAsString().equalsIgnoreCase(Type.FAILED.name())) {
+    public static boolean isConnection(@NotNull JsonObject object) {
+        if (!object.has("type") || !object.get("type").getAsString().equalsIgnoreCase(Type.CONNECTION.name())) {
             return false;
         } else if (!object.has("response")) {
             return false;
@@ -37,7 +34,7 @@ public final class PacketValidator {
     }
 
     public enum Type {
-        FAILED,
+        CONNECTION,
         SERVER_MESSAGE
     }
 

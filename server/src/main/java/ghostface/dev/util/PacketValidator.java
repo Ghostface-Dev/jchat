@@ -14,9 +14,9 @@ public class PacketValidator {
     public static boolean isAuthentication(@NotNull JsonObject object) {
         if (!object.has("type") || !object.get("type").getAsString().equalsIgnoreCase((Type.AUTHENTICATION.name()))) {
             return false;
-        } else if (!object.has("email") || !Email.validate(object.get("email").getAsString())) {
+        } else if (!object.has("email") || !Email.isValid(object.get("email").getAsString())) {
             return false;
-        } else if (!object.has("password") || !Password.validate(object.get("password").getAsString())) {
+        } else if (!object.has("password") || Password.isValid(object.get("password").getAsString())) {
             return false;
         }
         return true;
@@ -40,11 +40,11 @@ public class PacketValidator {
     public static boolean isRegistry(@NotNull JsonObject object) {
         if (!object.has("type") || !object.get("type").getAsString().equalsIgnoreCase(Type.REGISTRY.name())) {
             return false;
-        } else if (!object.has("email") || !Email.validate(object.get("email").getAsString())) {
+        } else if (!object.has("email") || !Email.isValid(object.get("email").getAsString())) {
             return false;
-        } else if (!object.has("username") || !Username.validate(object.get("username").getAsString())) {
+        } else if (!object.has("username") || !Username.isValid(object.get("username").getAsString())) {
             return false;
-        } else if (!object.has("password") || !Password.validate(object.get("password").getAsString())) {
+        } else if (!object.has("password") || Password.isValid(object.get("password").getAsString())) {
             return false;
         }
         return true;

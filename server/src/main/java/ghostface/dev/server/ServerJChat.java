@@ -1,6 +1,7 @@
 package ghostface.dev.server;
 
 import ghostface.dev.Client;
+import ghostface.dev.thread.Accounts;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,10 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class ServerJChat {
 
-    // todo add accounts
-
     private final @NotNull Set<@NotNull Client> clients = ConcurrentHashMap.newKeySet();
     private final @NotNull InetSocketAddress address;
+    private final @NotNull Accounts accounts;
 
     private @Nullable ServerSocketChannel channel;
     private @Nullable Selector selector;
@@ -27,6 +27,7 @@ public final class ServerJChat {
 
     public ServerJChat(@NotNull InetSocketAddress address) {
         this.address = address;
+        this.accounts = Accounts.getInstance();
     }
 
     public synchronized boolean start() throws IOException {
@@ -81,6 +82,10 @@ public final class ServerJChat {
     }
 
     // Getters
+
+    @NotNull Accounts getAccounts() {
+        return accounts;
+    }
 
     public @NotNull Set<@NotNull Client> getClients() {
         return clients;

@@ -3,8 +3,6 @@ package ghostface.dev.packet;
 import com.google.gson.JsonObject;
 import org.jetbrains.annotations.NotNull;
 
-import java.time.OffsetDateTime;
-
 public abstract class Packet {
 
     protected final @NotNull JsonObject data;
@@ -26,12 +24,12 @@ public abstract class Packet {
         AUTHENTICATION,
         MESSAGE,
         REGISTRY,
-        FAILED,
+        CONNECTION,
         SERVER_MESSAGE
     }
 
     @Override
-    public String toString() {
+    public @NotNull String toString() {
         return data.toString();
     }
 }

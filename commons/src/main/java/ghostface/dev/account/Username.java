@@ -1,26 +1,33 @@
 package ghostface.dev.account;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Objects;
 
 public class Username implements CharSequence {
 
     // Static
 
-    public static boolean validate(@NotNull String username) {
+    public static boolean isValid(@NotNull String username) {
         if (username.isEmpty()) {
-            System.err.println("Invalid Username");
             return false;
         } else if (!(username.length() >= 3 && username.length() <=14)) {
-            System.err.println("Username must be 3 at 14 characters");
             return false;
         } else if (!Character.isLetter(username.charAt(0))) {
-            System.err.println("First index must to be a letter");
             return false;
         } else if (!username.matches("^[a-zA-Z0-9._-]+$")) {
-            System.err.println("Invalid character");
             return false;
         }
         return true;
+    }
+
+    public static @NotNull Username parse(@NotNull String string) {
+        if (!isValid(string)) {
+            throw new IllegalArgumentException("Cannot parse '" + string + "' as Username");
+        }
+
+        return new Username(string);
     }
 
     // Object
@@ -28,11 +35,11 @@ public class Username implements CharSequence {
     private final @NotNull String string;
 
     public Username(@NotNull String string) {
-        this.string = string;
-
-        if (!validate(string)) {
-            throw new IllegalArgumentException("The String '" + string + "' cannot be parsed as valid username");
+        if (!isValid(string)) {
+            throw new IllegalArgumentException("Username is not valid");
         }
+
+        this.string = string;
     }
 
     // Natives
@@ -55,5 +62,20 @@ public class Username implements CharSequence {
     @Override
     public @NotNull String toString() {
         return string;
+    }
+
+    // Natives
+
+    @Override
+    public boolean equals(@Nullable Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        @NotNull Username username = (Username) object;
+        return Objects.equals(string, username.string);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(string);
     }
 }
