@@ -1,7 +1,8 @@
-package ghostface.dev.account;
+package ghostface.dev.thread;
 
-import ghostface.dev.entity.Account;
+import ghostface.dev.entity.User;
 import ghostface.dev.entity.SignIn;
+import ghostface.dev.packet.ConnectionPacket;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,27 +19,19 @@ public final class Accounts extends Thread {
 
     // Object
 
-    private final @NotNull Set<@NotNull Account> accounts = ConcurrentHashMap.newKeySet();
+    private final @NotNull Set<@NotNull User> users = ConcurrentHashMap.newKeySet();
     private final @NotNull BlockingQueue<@NotNull Runnable> queue = new LinkedBlockingQueue<>();
-
     // TODO register runnable
-    public @NotNull CompletableFuture<@NotNull Boolean> register(@NotNull Account account) {
-        @NotNull CompletableFuture<@NotNull Boolean> future = new CompletableFuture<>();
-        getInstance().queue.add(new RegisterRunnable(getInstance(), future, account));
+    public @NotNull CompletableFuture<@NotNull ConnectionPacket> register(@NotNull User user) {
+        @NotNull CompletableFuture<@NotNull ConnectionPacket> future = new CompletableFuture<>();
+        getInstance().queue.add(new RegisterRunnable(getInstance(), future, user));
         return future;
     }
     // TODO authentication runnable
-    public @NotNull CompletableFuture<@NotNull Boolean> authenticate(@NotNull SignIn signInAccount) {
-        @NotNull CompletableFuture<@NotNull Boolean> future = new CompletableFuture<>();
-        getInstance().queue.add(new AuthenticationRunnable(getInstance(),future ,signInAccount));
+    public @NotNull CompletableFuture<@NotNull ConnectionPacket> authenticate(@NotNull SignIn signInAccount) {
+        @NotNull CompletableFuture<@NotNull ConnectionPacket> future = new CompletableFuture<>();
+        getInstance().queue.add(new AuthenticationRunnable(getInstance(), future, signInAccount));
         return future;
-    }
-
-    public Accounts() {
-        super("Accounts thread");
-        setDaemon(false);
-
-        start();
     }
 
     @Override
@@ -56,6 +49,19 @@ public final class Accounts extends Thread {
                 // todo do something
             }
         }
+    }
+
+    // Getters
+
+    @NotNull Set<@NotNull User> getAccounts() {
+        return users;
+    }
+
+    public Accounts() {
+        super("Accounts thread");
+        setDaemon(false);
+
+        start();
     }
 
 }
