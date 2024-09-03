@@ -6,8 +6,6 @@ import ghostface.dev.account.Password;
 import ghostface.dev.account.Username;
 import ghostface.dev.connection.Account;
 import ghostface.dev.exception.AuthenticationException;
-import ghostface.dev.packet.ConnectionPacket;
-import ghostface.dev.packet.ConnectionPacket.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.OffsetDateTime;
@@ -19,9 +17,9 @@ final class RegisterRunnable implements Runnable {
     private final @NotNull Email email;
     private final @NotNull Password password;
     private final @NotNull Username username;
-    private final @NotNull CompletableFuture<@NotNull ConnectionPacket> future;
+    private final @NotNull CompletableFuture<@NotNull Boolean> future;
 
-    public RegisterRunnable(@NotNull DataBase dataBase, @NotNull Account account, @NotNull CompletableFuture<@NotNull ConnectionPacket> future) {
+    public RegisterRunnable(@NotNull DataBase dataBase, @NotNull Account account, @NotNull CompletableFuture<@NotNull Boolean> future) {
         this.dataBase = dataBase;
         this.email = account.getEmail();
         this.password = account.getPassword();
@@ -43,17 +41,11 @@ final class RegisterRunnable implements Runnable {
             } else {
                 @NotNull Account account = new Account(email, password, new User(username, OffsetDateTime.now()));
                 dataBase.getAccounts().add(account);
-                future.complete(new ConnectionPacket(Response.SUCCESS));
+                future.complete(true);
             }
         } catch (AuthenticationException e) {
-
+            future.completeExceptionally(e);
         }
 
-    }
-
-    // Getters
-
-    public @NotNull CompletableFuture<@NotNull ConnectionPacket> getFuture() {
-        return future;
     }
 }

@@ -2,10 +2,9 @@ package ghostface.dev.connection;
 
 import ghostface.dev.account.Email;
 import ghostface.dev.account.Password;
+import ghostface.dev.exception.AccountException;
 import ghostface.dev.exception.AuthenticationException;
 import ghostface.dev.management.DataBase;
-import ghostface.dev.packet.ConnectionPacket;
-import ghostface.dev.packet.ConnectionPacket.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
@@ -17,8 +16,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public final class Client {
 
@@ -30,14 +29,33 @@ public final class Client {
         this.channel = channel;
     }
 
-    public void authenticate(@NotNull Email email, @NotNull Password password) throws AuthenticationException {
-        @NotNull CompletableFuture<@NotNull ConnectionPacket> future = dataBase.authenticate(email, password, this);
-        if (future.isCompletedExceptionally()) {
-            throw new AuthenticationException(future.exceptionNow().getMessage());
+    public boolean isAuthenticated() {
+        return dataBase.getAccount(this).isPresent();
+    }
+
+    public void authenticate(@NotNull Email email, @NotNull Password password) throws AuthenticationException, AccountException {
+        if (isAuthenticated()) {
+            throw new AuthenticationException("Client already authenticated");
+        } else try {
+            @NotNull CompletableFuture<@NotNull Account> future = dataBase.authenticate(email, password);
+            future.get().online(this);
+        } catch (InterruptedException | ExecutionException e) {
+            throw new AuthenticationException(e.getMessage());
         }
     }
 
-    // TODO close client
+    public void deauthenticate() {
+        if (!isAuthenticated() || dataBase.getAccount(this).isEmpty()) {
+            return;
+        }
+        dataBase.getAccount(this).get().offline();
+    }
+
+    public void close() throws IOException {
+        dataBase.getClients().remove(this);
+        deauthenticate();
+        channel.close();
+    }
 
     public @Nullable String read(@NotNull SelectionKey key) throws ClosedChannelException {
         @NotNull SocketChannel channel = (SocketChannel) key.channel();
@@ -80,13 +98,11 @@ public final class Client {
 
     // Getters
 
-    public @NotNull Optional<@NotNull Client> getClient(@NotNull SocketChannel channel) {
-        return dataBase.getClients().stream().filter(client -> client.getChannel().equals(channel)).findFirst();
-    }
-
     public @NotNull SocketChannel getChannel() {
         return channel;
     }
+
+    // Natives
 
     @Override
     public boolean equals(@Nullable Object object) {
