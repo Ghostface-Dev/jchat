@@ -1,11 +1,8 @@
 package ghostface.dev.packet;
 
 import com.google.gson.JsonObject;
-import ghostface.dev.account.Username;
-import ghostface.dev.entity.Message;
+import ghostface.dev.Message;
 import org.jetbrains.annotations.NotNull;
-
-import java.time.OffsetDateTime;
 
 public class ServerMessagePacket extends Packet {
 

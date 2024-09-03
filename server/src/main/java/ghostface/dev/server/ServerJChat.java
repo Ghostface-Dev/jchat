@@ -1,7 +1,6 @@
 package ghostface.dev.server;
 
-import ghostface.dev.Client;
-import ghostface.dev.thread.Accounts;
+import ghostface.dev.management.DataBase;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -10,24 +9,18 @@ import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class ServerJChat {
 
-    private final @NotNull Set<@NotNull Client> clients = ConcurrentHashMap.newKeySet();
+    private final @NotNull DataBase dataBase;
     private final @NotNull InetSocketAddress address;
-    private final @NotNull Accounts accounts;
-
     private @Nullable ServerSocketChannel channel;
     private @Nullable Selector selector;
     private @Nullable Thread thread;
 
     public ServerJChat(@NotNull InetSocketAddress address) {
         this.address = address;
-        this.accounts = Accounts.getInstance();
+        this.dataBase = DataBase.getInstance();
     }
 
     public synchronized boolean start() throws IOException {
@@ -64,31 +57,17 @@ public final class ServerJChat {
         channel.close();
         selector.close();
 
-        for (@NotNull Client client : clients) {
-            client.close();
-        }
-
         this.channel = null;
         this.selector = null;
         this.thread = null;
-        clients.clear();
 
         return true;
     }
 
-    public @NotNull Optional<@NotNull Client> getClient(@NotNull SelectionKey key) {
-        @NotNull SocketChannel channel = (SocketChannel) key.channel();
-        return clients.stream().filter(client -> client.getChannel().equals(channel)).findFirst();
-    }
-
     // Getters
 
-    @NotNull Accounts getAccounts() {
-        return accounts;
-    }
-
-    public @NotNull Set<@NotNull Client> getClients() {
-        return clients;
+    public @NotNull DataBase getDataBase() {
+        return dataBase;
     }
 
     public @NotNull InetSocketAddress getAddress() {

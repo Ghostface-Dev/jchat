@@ -24,6 +24,7 @@ public abstract class Packet {
         AUTHENTICATION,
         MESSAGE,
         REGISTRY,
+        ERROR,
         CONNECTION,
         SERVER_MESSAGE
     }

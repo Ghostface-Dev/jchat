@@ -1,4 +1,4 @@
-package ghostface.dev.entity;
+package ghostface.dev;
 
 import ghostface.dev.account.Username;
 import org.jetbrains.annotations.NotNull;

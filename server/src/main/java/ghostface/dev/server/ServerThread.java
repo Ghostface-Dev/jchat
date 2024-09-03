@@ -2,16 +2,19 @@ package ghostface.dev.server;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import ghostface.dev.Client;
+import ghostface.dev.Message;
+import ghostface.dev.User;
 import ghostface.dev.account.Email;
 import ghostface.dev.account.Password;
 import ghostface.dev.account.Username;
-import ghostface.dev.entity.Message;
-import ghostface.dev.entity.SignIn;
-import ghostface.dev.entity.User;
+import ghostface.dev.connection.Account;
+import ghostface.dev.connection.Client;
+import ghostface.dev.exception.AccountException;
+import ghostface.dev.exception.AuthenticationException;
+import ghostface.dev.management.DataBase;
 import ghostface.dev.packet.ConnectionPacket;
+import ghostface.dev.packet.ErrorPacket;
 import ghostface.dev.packet.Packet;
-import ghostface.dev.packet.ServerMessagePacket;
 import ghostface.dev.util.PacketValidator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.nio.channels.*;
 import java.time.OffsetDateTime;
 import java.util.Iterator;
@@ -75,75 +79,85 @@ final class ServerThread extends Thread {
                             @NotNull SocketChannel socket = this.channel.accept();
                             socket.configureBlocking(false);
                             socket.register(selector, SelectionKey.OP_READ);
-                            @NotNull Client client = new Client(chat, socket);
-                            chat.getClients().add(client);
+                            @NotNull Client client = new Client(chat.getDataBase(), socket);
+                            chat.getDataBase().getClients().add(client);
                         } catch (@NotNull Throwable throwable) {
-                            throw new SocketException();
+                            throw new SocketException(throwable.getMessage());
                         }
                     }
 
                     if (key.isReadable()) {
-                        @NotNull Optional<@NotNull Client> clientOptional = chat.getClient(key);
+                        @NotNull Optional<@NotNull Client> clientOptional = chat.getDataBase().getClient(key);
 
-                        if (!clientOptional.isPresent()) {
-                            throw new SocketException();
-                        } else {
-                            @Nullable String response = clientOptional.get().read(key);
-
-                            if (response != null) {
-                                @NotNull JsonObject object = JsonParser.parseString(response).getAsJsonObject();
+                        if (clientOptional.isPresent()) {
+                            @Nullable String reponse = clientOptional.get().read(key);
+                            if (reponse != null) {
+                                @NotNull JsonObject object = JsonParser.parseString(reponse).getAsJsonObject();
 
                                 if (PacketValidator.isAuthentication(object)) {
                                     @NotNull Email email = Email.parse(object.get("email").getAsString());
                                     @NotNull Password password = Password.parse(object.get("password").getAsString());
-                                    @NotNull SignIn sign = new SignIn(email, password);
+                                    try {
+                                        clientOptional.get().authenticate(email, password);
+                                    } catch (AuthenticationException | AccountException e) {
+                                        @NotNull Packet packet = new ErrorPacket(e.getMessage());
+                                        clientOptional.get().write(packet.toString());
+                                    }
+                                }
 
-                                    @NotNull CompletableFuture<@NotNull ConnectionPacket> future = chat.getAccounts().authenticate(sign);
-                                    @NotNull Packet packet = future.get();
-                                    clientOptional.get().write(packet.toString());
-
-                                } else if (PacketValidator.isRegistry(object)) {
+                                if (PacketValidator.isRegistry(object)) {
                                     @NotNull Email email = Email.parse(object.get("email").getAsString());
                                     @NotNull Password password = Password.parse(object.get("password").getAsString());
                                     @NotNull Username username = Username.parse(object.get("username").getAsString());
-                                    @NotNull User user = new User(username, email, password);
 
-                                    @NotNull CompletableFuture<@NotNull ConnectionPacket> future = chat.getAccounts().register(user);
-                                    @NotNull Packet packet = future.get();
-                                    clientOptional.get().write(packet.toString());
-
-                                } else if (PacketValidator.isMessage(object)) {
-                                    @NotNull Optional<@NotNull User> userOptional = chat.getAccounts().getUser(clientOptional.get());
-                                    if (!userOptional.isPresent()) {
-                                        throw new SocketException();
-                                    } else {
-                                        userOptional.get().setChannel(clientOptional.get());
-                                        @NotNull Username username = userOptional.get().getUsername();
-
-                                        @NotNull Message message = new Message(object.get("content").getAsString(), username, OffsetDateTime.parse(object.get("time").getAsString()));
-                                        @NotNull Packet packet = new ServerMessagePacket(message);
+                                    @NotNull Account account = new Account(email, password, new User(username, OffsetDateTime.now()));
+                                    @NotNull CompletableFuture<@NotNull Boolean> future = chat.getDataBase().register(account);
+                                    try {
+                                        if (future.get()) {
+                                            @NotNull Packet packet = new ConnectionPacket(ConnectionPacket.Scope.SUCCESS);
+                                        }
+                                    } catch (ExecutionException e) {
+                                        @NotNull Packet packet = new ErrorPacket(e.getMessage());
                                         clientOptional.get().write(packet.toString());
+                                        throw new SocketException(e.getMessage());
+                                    } catch (InterruptedException e) {
+                                        throw new SocketException(e.getMessage());
                                     }
-                                } else {
-                                    throw new SocketException();
+                                }
+
+                                if (PacketValidator.isMessage(object)) {
+                                    if (!clientOptional.get().isAuthenticated()) {
+                                        @NotNull Packet packet = new ErrorPacket("Client is not authenticated");
+                                        clientOptional.get().write(packet.toString());
+                                        throw new SocketException("Client not authenticated");
+                                    } else {
+                                        @NotNull Optional<@NotNull Account> account = chat.getDataBase().getAccount(clientOptional.get());
+                                        if (account.isEmpty()) {
+                                            @NotNull Packet packet = new ErrorPacket("Cannot find account");
+                                            clientOptional.get().write(packet.toString());
+                                            throw new SocketException("Client account not found");
+                                        }
+                                        @NotNull String text = object.get("text").getAsString();
+                                        @NotNull Username username = account.get().getUser().getUsername();
+                                        @NotNull OffsetDateTime time = OffsetDateTime.parse(object.get("time").getAsString());
+
+                                        @NotNull Message message = new Message(text, username, time);
+                                        clientOptional.get().broadcast(message.toString());
+                                    }
                                 }
                             }
                         }
+
                     }
-                    // todo send packets
-                } catch (IllegalArgumentException | SocketException | InterruptedException | ExecutionException e) {
+
+                } catch (IllegalArgumentException | SocketException e) {
                     log.error(e.getMessage());
                     @NotNull SocketChannel channel = (SocketChannel) key.channel();
                     try {channel.close();} catch (IOException ignore) {}
-                } catch (ClosedSelectorException ignore) {
-
                 } catch (IOException e) {
                     log.error("I/O Error: {}", e.getMessage());
                 }
-
             }
-
         }
     }
-
 }

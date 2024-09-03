@@ -11,7 +11,7 @@ public final class MessagePacket extends Packet {
     public MessagePacket(@NotNull String content, @NotNull OffsetDateTime time) {
         super(new JsonObject() , Type.MESSAGE);
         data.addProperty("type", getType().name().toLowerCase());
-        data.addProperty("content", content);
+        data.addProperty("text", content);
         data.addProperty("time", time.toString());
     }
 

@@ -25,7 +25,10 @@ public final class Password implements CharSequence {
 
     private final @NotNull String password;
 
-    public Password(@NotNull String password) {
+    public Password(@NotNull String password) throws IllegalArgumentException {
+        if (!isValid(password)) {
+            throw new IllegalArgumentException("Password '" + password + "' is not valid");
+        }
         this.password = password;
     }
 

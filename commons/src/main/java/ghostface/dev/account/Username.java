@@ -36,7 +36,7 @@ public class Username implements CharSequence {
 
     public Username(@NotNull String string) {
         if (!isValid(string)) {
-            throw new IllegalArgumentException("Username is not valid");
+            throw new IllegalArgumentException("Username '" + string + "' is not valid");
         }
 
         this.string = string;

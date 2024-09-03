@@ -25,7 +25,7 @@ public class PacketValidator {
     public static boolean isMessage(@NotNull JsonObject object) {
         if (!object.has("type") || !object.get("type").getAsString().equalsIgnoreCase(Type.MESSAGE.name())) {
             return false;
-        } else if (!object.has("content")) {
+        } else if (!object.has("text")) {
             return false;
         } else if (!object.has("time")) {
             return false;
