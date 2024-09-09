@@ -1,14 +1,14 @@
 package dev.ghostface.connection;
 
-import codes.ghostface.models.Email;
-import dev.ghostface.exception.AccountException;
-
+import codes.ghostface.ClientPacket;
 import dev.ghostface.server.JChatServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.naming.AuthenticationException;
-import java.io.IOException;
+import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.Objects;
 import java.util.Optional;
@@ -23,30 +23,39 @@ public final class Client {
         this.server = server;
     }
 
+    public @Nullable ClientPacket read() throws IOException, ClassNotFoundException {
+        @NotNull ByteBuffer buffer = ByteBuffer.allocate(2048);
+        @NotNull ByteArrayOutputStream array = new ByteArrayOutputStream();
+
+        buffer.clear();
+        int readyBytes = channel.read(buffer);
+
+        if (readyBytes == -1) {
+            throw new ClosedChannelException();
+        } else if (readyBytes == 0) {
+            return null;
+        } else while (readyBytes > 0) {
+            buffer.flip();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            array.write(bytes);
+            buffer.clear();
+            readyBytes = channel.read(buffer);
+        }
+
+        @NotNull ByteArrayInputStream arrayIn = new ByteArrayInputStream(array.toByteArray());
+        @NotNull ObjectInputStream obj = new ObjectInputStream(arrayIn);
+        arrayIn.close();
+
+        return (ClientPacket) obj.readObject();
+    }
+
     public void close() {
         getServer().getClients().remove(this);
         try {
             deauthenticate();
             getChannel().close();
         } catch (AuthenticationException | IOException ignore) {}
-    }
-
-    public void authenticate(@NotNull Email email, @NotNull String password) throws AuthenticationException {
-        if (this.isAuthenticated()) {
-            throw new AuthenticationException("Client already authenticated");
-        }
-
-        @NotNull Optional<@NotNull Account> optional = Data.getInstance().getAccount(email, password);
-
-        if (!optional.isPresent()) {
-            throw new AccountException("Account not found");
-        }
-        // Checks if account is online
-        if (optional.get().isOnline()) {
-            throw new AccountException("Account already in use");
-        }
-        // finish
-        optional.get().setClient(this);
     }
 
     public void deauthenticate() throws AuthenticationException {
