@@ -1,25 +1,26 @@
 package dev.ghostface.connection;
 
 import codes.ghostface.ClientPacket;
+import codes.ghostface.ServerPacket;
 import dev.ghostface.server.JChatServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.naming.AuthenticationException;
 import java.io.*;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SocketChannel;
 import java.util.Objects;
 import java.util.Optional;
 
 public final class Client {
 
-    private final @NotNull SocketChannel channel;
+    private final @NotNull Socket socket;
     private final @NotNull JChatServer server;
 
-    public Client(@NotNull SocketChannel channel, @NotNull JChatServer server) {
-        this.channel = channel;
+    public Client(@NotNull Socket socket, @NotNull JChatServer server) {
+        this.socket = socket;
         this.server = server;
     }
 
@@ -28,7 +29,7 @@ public final class Client {
         @NotNull ByteArrayOutputStream array = new ByteArrayOutputStream();
 
         buffer.clear();
-        int readyBytes = channel.read(buffer);
+        int readyBytes = socket.getChannel().read(buffer);
 
         if (readyBytes == -1) {
             throw new ClosedChannelException();
@@ -40,7 +41,7 @@ public final class Client {
             buffer.get(bytes);
             array.write(bytes);
             buffer.clear();
-            readyBytes = channel.read(buffer);
+            readyBytes = socket.getChannel().read(buffer);
         }
 
         @NotNull ByteArrayInputStream arrayIn = new ByteArrayInputStream(array.toByteArray());
@@ -50,11 +51,19 @@ public final class Client {
         return (ClientPacket) obj.readObject();
     }
 
+    public void write(@NotNull ServerPacket packet) throws ClosedChannelException {
+        try {
+            this.socket.getChannel().write(ByteBuffer.wrap(packet.toString().getBytes()));
+        } catch (IOException e) {
+            throw new ClosedChannelException();
+        }
+    }
+
     public void close() {
         getServer().getClients().remove(this);
         try {
             deauthenticate();
-            getChannel().close();
+            getSocket().close();
         } catch (AuthenticationException | IOException ignore) {}
     }
 
@@ -74,8 +83,8 @@ public final class Client {
 
     // Getters
 
-    public @NotNull SocketChannel getChannel() {
-        return channel;
+    public @NotNull Socket getSocket() {
+        return socket;
     }
 
     public @NotNull JChatServer getServer() {
@@ -89,11 +98,11 @@ public final class Client {
         if (this == object) return true;
         if (object == null || getClass() != object.getClass()) return false;
         @NotNull Client client = (Client) object;
-        return Objects.equals(channel, client.channel);
+        return Objects.equals(socket, client.socket);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(channel);
+        return Objects.hashCode(socket);
     }
 }
